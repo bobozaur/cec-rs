@@ -21,7 +21,6 @@ compile_error!("BUG: libcec abi not detected");
 
 use log::{trace, warn};
 
-use std::mem::MaybeUninit;
 use std::{collections::HashSet, pin::Pin};
 
 use arrayvec::ArrayVec;
@@ -808,17 +807,6 @@ impl From<CecDeviceTypeVec> for cec_device_type_list {
     }
 }
 
-// pub struct CecAdapterDescriptor {
-//     pub str_com_path: [::std::os::raw::c_char; 1024usize],
-//     pub str_com_name: [::std::os::raw::c_char; 1024usize],
-//     pub vendor_id: u16,
-//     pub product_id: u16,
-//     pub firmware_ersion: u16,
-//     pub physical_address: u16,
-//     pub firmware_build_date: u32,
-//     pub adapter_type: CecAdapterType,
-// }
-
 #[cfg(test)]
 mod cec_device_type_vec_tests {
     use super::*;
@@ -1273,7 +1261,7 @@ impl CecConnectionCfg {
             log_message_callbacks: std::mem::replace(&mut self.log_message_callback, None),
         });
         let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
-        let port = CString::new(self.port.clone()).expect("Invalid port name");
+        // let port = CString::new(self.port.clone()).expect("Invalid port name");
         let open_timeout = self.open_timeout.as_millis() as u32;
         let connection = CecConnection(
             self,
@@ -1284,7 +1272,25 @@ impl CecConnectionCfg {
             return Err(CecConnectionResultError::LibInitFailed);
         }
 
-        if unsafe { libcec_open(connection.1, port.as_ptr(), open_timeout) } == 0 {
+        let devices = connection.detect_adapters(true);
+        for dev in devices.iter() {
+            println!("Com Name: {:?}", unsafe {
+                CStr::from_ptr(dev.strComName.as_ptr())
+            });
+            println!("Com Path: {:?}", unsafe {
+                CStr::from_ptr(dev.strComPath.as_ptr())
+            });
+            println!(
+                "Adapter type: {:?}",
+                CecAdapterType::try_from(dev.adapterType)
+            );
+            println!("Firmware build date: {:?}", dev.iFirmwareBuildDate);
+            println!("Firmware version: {:?}", dev.iFirmwareVersion);
+            println!("Vendor ID: {:?}", dev.iVendorId);
+            println!("Product ID: {:?}", dev.iProductId);
+        }
+
+        if unsafe { libcec_open(connection.1, devices[0].strComName.as_ptr(), open_timeout) } == 0 {
             return Err(CecConnectionResultError::AdapterOpenFailed);
         }
 
