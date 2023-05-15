@@ -1199,7 +1199,7 @@ impl CecConnection {
                 self.1,
                 devices_list.as_mut_ptr(),
                 devices_list.len() as u8,
-                std::ptr::null(),
+                CString::new("/dev/cec0").unwrap().as_c_str().as_ptr(),
                 quick_scan as i32,
             )
         };
