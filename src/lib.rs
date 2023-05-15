@@ -1191,16 +1191,20 @@ impl CecConnection {
     }
 
     pub fn detect_adapters(&self, quick_scan: bool) -> Vec<cec_adapter_descriptor> {
-        let mut devices_list = Vec::new();
+        let mut devices_list = Vec::with_capacity(10);
+
+        println!("before libcec_detect_adapters");
         unsafe {
             libcec_detect_adapters(
                 self.1,
                 devices_list.as_mut_ptr(),
-                10,
+                devices_list.len() as u8,
                 std::ptr::null(),
                 quick_scan as i32,
             )
         };
+
+        println!("after libcec_detect_adapters");
 
         devices_list
     }
