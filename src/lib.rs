@@ -21,20 +21,21 @@ compile_error!("BUG: libcec abi not detected");
 
 use log::{trace, warn};
 
+use std::mem::MaybeUninit;
 use std::{collections::HashSet, pin::Pin};
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
-    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_log_message,
-    cec_logical_address, cec_logical_addresses, cec_power_status, libcec_audio_get_status,
-    libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration,
-    libcec_close, libcec_configuration, libcec_connection_t, libcec_destroy,
-    libcec_get_active_source, libcec_get_device_power_status, libcec_initialise,
-    libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices,
-    libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
-    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
-    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
-    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
+    cec_adapter_descriptor, cec_command, cec_datapacket, cec_device_type_list, cec_keypress,
+    cec_log_message, cec_logical_address, cec_logical_addresses, cec_power_status,
+    libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute,
+    libcec_clear_configuration, libcec_close, libcec_configuration, libcec_connection_t,
+    libcec_destroy, libcec_detect_adapters, libcec_get_active_source,
+    libcec_get_device_power_status, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
+    libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
+    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
+    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
+    libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
 
 use num_traits::ToPrimitive;
@@ -807,6 +808,17 @@ impl From<CecDeviceTypeVec> for cec_device_type_list {
     }
 }
 
+// pub struct CecAdapterDescriptor {
+//     pub str_com_path: [::std::os::raw::c_char; 1024usize],
+//     pub str_com_name: [::std::os::raw::c_char; 1024usize],
+//     pub vendor_id: u16,
+//     pub product_id: u16,
+//     pub firmware_ersion: u16,
+//     pub physical_address: u16,
+//     pub firmware_build_date: u32,
+//     pub adapter_type: CecAdapterType,
+// }
+
 #[cfg(test)]
 mod cec_device_type_vec_tests {
     use super::*;
@@ -1188,6 +1200,21 @@ impl CecConnection {
         } else {
             Ok(())
         }
+    }
+
+    pub fn detect_adapters(&self, quick_scan: bool) -> Vec<cec_adapter_descriptor> {
+        let mut devices_list = Vec::new();
+        unsafe {
+            libcec_detect_adapters(
+                self.1,
+                devices_list.as_mut_ptr(),
+                10,
+                std::ptr::null(),
+                quick_scan as i32,
+            )
+        };
+
+        devices_list
     }
 
     // Unimplemented:
